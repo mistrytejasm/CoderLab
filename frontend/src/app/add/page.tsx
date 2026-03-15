@@ -3,30 +3,34 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { Navbar } from '@/components/Navbar';
 import { Link2, FileText, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AddProblem() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'url' | 'manual'>('url');
-  
+
   // URL Import State
-  const [url, setUrl] = useState('');
+  const [url, setUrl]             = useState('');
   const [importing, setImporting] = useState(false);
-  
+  const [importError, setImportError] = useState('');
+
   // Manual Entry State
-  const [form, setForm] = useState({ title: '', description: '', difficulty: 'Easy', tags: '' });
+  const [form, setForm]           = useState({ title: '', description: '', difficulty: 'Easy', tags: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [manualError, setManualError] = useState('');
 
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
     setImporting(true);
+    setImportError('');
     try {
       const { data } = await api.post('/problems/import', { url });
       router.push(`/problems/${data.id}`);
     } catch (err: any) {
-      alert("Failed to import: " + (err.response?.data?.detail || err.message));
+      setImportError(err.response?.data?.detail || err.message || 'Import failed.');
     } finally {
       setImporting(false);
     }
@@ -35,132 +39,153 @@ export default function AddProblem() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setManualError('');
     try {
       const payload = {
         ...form,
         tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-        status: 'Unsolved'
+        status: 'Unsolved',
       };
       const { data } = await api.post('/problems', payload);
       router.push(`/problems/${data.id}`);
     } catch (err: any) {
-      alert("Failed to add problem: " + (err.response?.data?.detail || err.message));
+      setManualError(err.response?.data?.detail || err.message || 'Failed to save.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // shared input style
+  const inputCls = "w-full px-4 py-2.5 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+  const labelCls = "block text-sm font-medium mb-1.5 text-zinc-700 dark:text-zinc-300";
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 p-8 flex items-center justify-center">
-      <div className="max-w-xl w-full">
-        
-        <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 mb-8 transition-colors">
-          <ArrowLeft size={20} />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <Navbar showAdd={false} />
+
+      <main className="max-w-xl mx-auto px-6 py-10">
+        {/* Back link */}
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 mb-8 transition-colors">
+          <ArrowLeft size={15} />
           Back to Dashboard
         </Link>
-        
-        <h1 className="text-3xl font-bold mb-8">Add a New Problem</h1>
-        
+
+        <h1 className="text-2xl font-bold mb-8 tracking-tight">Add a Problem</h1>
+
         {/* Tabs */}
-        <div className="flex rounded-xl bg-zinc-200/50 dark:bg-zinc-900/50 p-1 mb-8">
-          <button 
-            onClick={() => setActiveTab('url')}
-            className={`flex-1 flex justify-center items-center gap-2 py-3 rounded-lg font-medium transition-all ${activeTab === 'url' ? 'bg-white dark:bg-zinc-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50'}`}
-          >
-            <Link2 size={18} />
-            Import by URL
-          </button>
-          <button 
-            onClick={() => setActiveTab('manual')}
-            className={`flex-1 flex justify-center items-center gap-2 py-3 rounded-lg font-medium transition-all ${activeTab === 'manual' ? 'bg-white dark:bg-zinc-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50'}`}
-          >
-            <FileText size={18} />
-            Manual Entry
-          </button>
+        <div className="flex rounded-xl p-1 mb-8 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+          {(['url', 'manual'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab
+                  ? 'bg-white dark:bg-zinc-800 shadow-sm text-zinc-900 dark:text-zinc-100'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+              }`}
+            >
+              {tab === 'url' ? <Link2 size={16} /> : <FileText size={16} />}
+              {tab === 'url' ? 'Import by URL' : 'Manual Entry'}
+            </button>
+          ))}
         </div>
 
-        {/* Content */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-8">
-          
+        {/* Card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-8 space-y-6">
+
           {activeTab === 'url' ? (
-            <form onSubmit={handleImport} className="space-y-6">
+            <form onSubmit={handleImport} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-2 text-zinc-700 dark:text-zinc-300">Problem URL (LeetCode, GfG, HackerRank)</label>
-                <input 
-                  type="url" 
+                <label className={labelCls}>Problem URL</label>
+                <input
+                  type="url"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={e => { setUrl(e.target.value); setImportError(''); }}
                   placeholder="https://leetcode.com/problems/two-sum/"
                   required
-                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className={inputCls}
                 />
               </div>
-              <p className="text-sm text-zinc-500">
-                Our AI will automatically extract the title, description, constraints, and tags from the page content.
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                Works with LeetCode, GeeksforGeeks, HackerRank, and more. Our AI will extract the title, description, examples, and tags automatically.
               </p>
-              <button 
-                type="submit" 
+              {importError && <ErrorBanner msg={importError} />}
+              <button
+                type="submit"
                 disabled={importing || !url}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-all flex justify-center items-center disabled:opacity-50"
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2 text-sm"
               >
-                {importing ? <><Loader2 className="animate-spin mr-2" size={20} /> Scanning & Importing...</> : "Import Magic ✨"}
+                {importing ? <><Loader2 size={16} className="animate-spin" /> Scanning &amp; Importing...</> : '✨ Import Problem'}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleManualSubmit} className="space-y-6">
-               <div>
-                <label className="block text-sm font-medium mb-2">Title</label>
-                <input 
-                  type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})}
-                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+            <form onSubmit={handleManualSubmit} className="space-y-5">
+              <div>
+                <label className={labelCls}>Title</label>
+                <input
+                  type="text" required
+                  value={form.title}
+                  onChange={e => { setForm({ ...form, title: e.target.value }); setManualError(''); }}
                   placeholder="Two Sum"
+                  className={inputCls}
                 />
               </div>
-              
-              <div className="flex gap-4">
-                 <div className="flex-1">
-                  <label className="block text-sm font-medium mb-2">Difficulty</label>
-                  <select 
-                    value={form.difficulty} onChange={e => setForm({...form, difficulty: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Difficulty</label>
+                  <select
+                    value={form.difficulty}
+                    onChange={e => setForm({ ...form, difficulty: e.target.value })}
+                    className={inputCls}
                   >
                     <option>Easy</option>
                     <option>Medium</option>
                     <option>Hard</option>
                   </select>
                 </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-2">Tags (comma separated)</label>
-                  <input 
-                    type="text" value={form.tags} onChange={e => setForm({...form, tags: e.target.value})}
+                <div>
+                  <label className={labelCls}>Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    value={form.tags}
+                    onChange={e => setForm({ ...form, tags: e.target.value })}
                     placeholder="Array, Hash Table"
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                    className={inputCls}
                   />
                 </div>
               </div>
-
-               <div>
-                <label className="block text-sm font-medium mb-2">Description (Markdown Supported)</label>
-                <textarea 
-                  required value={form.description} onChange={e => setForm({...form, description: e.target.value})}
-                  rows={8}
-                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none" 
-                  placeholder="Write the problem statement here..."
+              <div>
+                <label className={labelCls}>Description (Markdown supported)</label>
+                <textarea
+                  required
+                  value={form.description}
+                  onChange={e => setForm({ ...form, description: e.target.value })}
+                  rows={9}
+                  placeholder="## Problem Statement&#10;&#10;Given an array of integers..."
+                  className={`${inputCls} resize-none font-mono text-xs leading-relaxed`}
                 />
               </div>
-
-              <button 
-                type="submit" 
+              {manualError && <ErrorBanner msg={manualError} />}
+              <button
+                type="submit"
                 disabled={submitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-all flex justify-center items-center disabled:opacity-50"
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2 text-sm"
               >
-                {submitting ? <Loader2 className="animate-spin" size={20} /> : "Save Problem"}
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : 'Save Problem'}
               </button>
             </form>
           )}
-
         </div>
-      </div>
+      </main>
+    </div>
+  );
+}
+
+function ErrorBanner({ msg }: { msg: string }) {
+  return (
+    <div className="flex items-start gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400 rounded-lg px-4 py-3 text-sm leading-relaxed">
+      <span className="shrink-0 mt-0.5">⚠️</span>
+      <span>{msg}</span>
     </div>
   );
 }

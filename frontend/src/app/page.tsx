@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { BadgeCheck, XCircle, Search, PlusCircle, Filter } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Navbar } from '@/components/Navbar';
+import { BadgeCheck, XCircle, Search, Filter, ChevronRight } from 'lucide-react';
 
 interface Problem {
-  id: str;
+  id: string;
   title: string;
   difficulty: string;
   tags: string[];
@@ -15,73 +15,84 @@ interface Problem {
   created_at: string;
 }
 
+const DIFFICULTY_STYLES: Record<string, string> = {
+  Easy:   'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
+  Medium: 'bg-amber-100   text-amber-700   dark:bg-amber-500/10   dark:text-amber-400',
+  Hard:   'bg-red-100     text-red-700     dark:bg-red-500/10     dark:text-red-400',
+};
+
 export default function Home() {
   const [problems, setProblems] = useState<Problem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState('All');
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState('');
+  const [diff, setDiff]         = useState('All');
 
-  useEffect(() => {
-    fetchProblems();
-  }, []);
+  useEffect(() => { fetchProblems(); }, []);
 
   const fetchProblems = async () => {
     try {
-      const response = await api.get('/problems');
-      setProblems(response.data);
-    } catch (error) {
-      console.error("Failed to fetch problems", error);
-    } finally {
-      setLoading(false);
-    }
+      const { data } = await api.get('/problems');
+      setProblems(data);
+    } catch { /* silent */ }
+    finally { setLoading(false); }
   };
 
-  const filteredProblems = problems.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || 
-                          p.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
-    const matchesDifficulty = difficultyFilter === 'All' || p.difficulty === difficultyFilter;
-    return matchesSearch && matchesDifficulty;
+  const filtered = problems.filter(p => {
+    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) ||
+                        p.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
+    const matchDiff   = diff === 'All' || p.difficulty === diff;
+    return matchSearch && matchDiff;
   });
 
+  const solved   = problems.filter(p => p.status === 'Solved').length;
+  const total    = problems.length;
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <Navbar />
+
+      <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">CoderLab</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1">Your personal Python practice platform.</p>
-          </div>
-          <Link href="/add">
-            <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm">
-              <PlusCircle size={20} />
-              Add Problem
-            </button>
-          </Link>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight">Problems</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+            {total > 0
+              ? <>{solved} / {total} solved — keep going 🚀</>
+              : 'No problems yet. Add your first one!'}
+          </p>
         </div>
 
-        {/* Filters Panel */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by title or tag..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+        {/* Progress bar */}
+        {total > 0 && (
+          <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+              style={{ width: `${(solved / total) * 100}%` }}
             />
           </div>
-          
-          <div className="flex items-center gap-2 relative">
-            <Filter className="text-zinc-400" size={18} />
-            <select 
-               value={difficultyFilter}
-               onChange={(e) => setDifficultyFilter(e.target.value)}
-               className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-8 font-medium cursor-pointer"
+        )}
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Search by title or tag..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-zinc-400" />
+            <select
+              value={diff}
+              onChange={e => setDiff(e.target.value)}
+              className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="All">All Difficulties</option>
+              <option value="All">All Levels</option>
               <option value="Easy">Easy</option>
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
@@ -89,67 +100,71 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Problems Table */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        {/* Table */}
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm">
           {loading ? (
-             <div className="p-12 text-center text-zinc-500 animate-pulse font-medium">Loading problems...</div>
-          ) : filteredProblems.length === 0 ? (
-             <div className="p-12 text-center text-zinc-500 font-medium space-y-3">
-               <p>No problems found.</p>
-               <Link href="/add" className="text-blue-500 hover:underline">Add your first problem</Link>
-             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-950/50 border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="p-4 font-semibold text-zinc-500 dark:text-zinc-400">Status</th>
-                    <th className="p-4 font-semibold text-zinc-500 dark:text-zinc-400">Title</th>
-                    <th className="p-4 font-semibold text-zinc-500 dark:text-zinc-400">Difficulty</th>
-                    <th className="p-4 font-semibold text-zinc-500 dark:text-zinc-400">Tags</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {filteredProblems.map(p => (
-                    <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group">
-                      <td className="p-4 w-20">
-                        <div className="flex justify-center">
-                           {p.status === 'Solved' 
-                             ? <BadgeCheck className="text-green-500" size={24} /> 
-                             : <XCircle className="text-zinc-300 dark:text-zinc-700 group-hover:text-red-400 transition-colors" size={24} />}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Link href={`/problems/${p.id}`} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline text-lg">
-                          {p.title}
-                        </Link>
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
-                          p.difficulty === 'Easy' ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' :
-                          p.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400' :
-                          'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
-                        }`}>
-                          {p.difficulty}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-wrap gap-2">
-                          {p.tags.map(t => (
-                            <span key={t} className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="p-16 text-center text-zinc-400 animate-pulse text-sm">Loading problems...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-16 text-center space-y-3">
+              <p className="text-zinc-400 text-sm">No problems found.</p>
+              <Link href="/add" className="text-blue-500 hover:underline text-sm font-medium">
+                Add your first problem →
+              </Link>
             </div>
+          ) : (
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/50">
+                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider w-16">Status</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider">Title</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider w-28">Difficulty</th>
+                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider">Tags</th>
+                  <th className="px-5 py-3 w-10" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {filtered.map(p => (
+                  <tr
+                    key={p.id}
+                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group"
+                  >
+                    <td className="px-5 py-3.5">
+                      {p.status === 'Solved'
+                        ? <BadgeCheck size={20} className="text-emerald-500" />
+                        : <XCircle size={20} className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <Link
+                        href={`/problems/${p.id}`}
+                        className="font-semibold text-zinc-800 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      >
+                        {p.title}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${DIFFICULTY_STYLES[p.difficulty] ?? 'bg-zinc-100 text-zinc-500'}`}>
+                        {p.difficulty}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-wrap gap-1.5">
+                        {p.tags.map(t => (
+                          <span key={t} className="px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <ChevronRight size={14} className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

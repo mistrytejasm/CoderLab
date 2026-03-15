@@ -1,26 +1,154 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
+/* ─── Design Tokens ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:             #f4f4f5;
+  --bg-surface:     #ffffff;
+  --bg-elevated:    #fafafa;
+  --border:         #e4e4e7;
+  --text:           #18181b;
+  --text-muted:     #71717a;
+  --text-subtle:    #a1a1aa;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --bg:             #09090b;
+  --bg-surface:     #111113;
+  --bg-elevated:    #18181b;
+  --border:         #27272a;
+  --text:           #fafafa;
+  --text-muted:     #a1a1aa;
+  --text-subtle:    #71717a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+html { color-scheme: dark; }
+.light { color-scheme: light; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar               { width: 5px; height: 5px; }
+::-webkit-scrollbar-track         { background: transparent; }
+::-webkit-scrollbar-thumb         { background: #3f3f46; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover   { background: #52525b; }
+.light ::-webkit-scrollbar-thumb  { background: #d4d4d8; }
+.light ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+/* ─── Problem Markdown ─── */
+.problem-markdown h1,
+.problem-markdown h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 1.5rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.01em;
+}
+
+.problem-markdown h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 1.1rem;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.problem-markdown p {
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin-bottom: 0.75rem;
+  font-size: 0.925rem;
+}
+
+.problem-markdown strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.problem-markdown em { color: var(--text-subtle); font-style: italic; }
+
+.problem-markdown ul,
+.problem-markdown ol {
+  padding-left: 1.4rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.problem-markdown ul { list-style-type: disc; }
+.problem-markdown ol { list-style-type: decimal; }
+
+.problem-markdown li {
+  color: var(--text-muted);
+  line-height: 1.7;
+  font-size: 0.925rem;
+}
+
+.problem-markdown li::marker { color: var(--border); }
+
+/* Inline code */
+.problem-markdown code {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 0.12em 0.42em;
+  border-radius: 5px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+
+/* Light mode inline code */
+.light .problem-markdown code {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+/* Block code */
+.problem-markdown pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin: 0.9rem 0;
+  overflow-x: auto;
+}
+
+.problem-markdown pre code {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 0;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  white-space: pre;
+}
+
+.problem-markdown blockquote {
+  border-left: 3px solid #3b82f6;
+  padding: 0.5rem 1rem;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 0 8px 8px 0;
+  margin: 0.9rem 0;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.problem-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
 }

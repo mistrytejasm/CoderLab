@@ -42,6 +42,13 @@ async def get_problem(id: str, db = Depends(get_db)):
 @router.post("/", response_model=ProblemResponse, status_code=201)
 async def create_problem(problem: ProblemCreate, db = Depends(get_db)):
     logger.info(f"Manual problem creation request for title: '{problem.title}'")
+    
+    # Duplicate check — same title (case-insensitive)
+    existing = await db.problems.find_one({"title": {"$regex": f"^{problem.title}$", "$options": "i"}})
+    if existing:
+        logger.warning(f"Duplicate problem blocked: '{problem.title}' already exists.")
+        raise HTTPException(status_code=409, detail=f"A problem titled '{problem.title}' already exists.")
+    
     problem_dict = problem.dict()
     from datetime import datetime
     problem_dict["created_at"] = datetime.utcnow()
@@ -96,6 +103,13 @@ async def import_problem(request: ProblemImportRequest, db = Depends(get_db)):
         # Default status for imported problems
         formatted_data["status"] = "Unsolved"
         logger.debug(f"LLM extraction successful. Title: '{formatted_data.get('title')}'")
+        
+        # Duplicate check — reject if same title already exists
+        extracted_title = formatted_data.get("title", "")
+        existing = await db.problems.find_one({"title": {"$regex": f"^{extracted_title}$", "$options": "i"}})
+        if existing:
+            logger.warning(f"Duplicate import blocked: '{extracted_title}' already exists.")
+            raise HTTPException(status_code=409, detail=f"Problem '{extracted_title}' is already in your library.")
         
         # Validate using Pydantic
         problem_create = ProblemCreate(**formatted_data)

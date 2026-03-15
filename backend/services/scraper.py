@@ -60,22 +60,33 @@ async def format_problem_with_llm(raw_text: str, source_url: str) -> dict:
     client = AsyncGroq(api_key=api_key)
     
     prompt = f"""
-    You are an expert coding assistant. Extract the coding problem from the text below and format it into a clean, structured JSON format. 
-    The source website is {source_url}.
-    
-    Required JSON structure:
-    {{
-        "title": "String - the problem title",
-        "description": "String - strict markdown formatted problem description. CRITICAL: Do NOT use excessive newlines. Keep formatting compact. Use single newlines for line breaks and do not double-space paragraphs.",
-        "difficulty": "String - Easy, Medium, or Hard",
-        "tags": ["Array of Strings - e.g. 'Array', 'Hash Table', 'Dynamic Programming'"]
-    }}
-    
-    Raw Text:
-    {raw_text[:8000]} # Limit text length to avoid token limits
-    
-    Return ONLY valid JSON.
-    """
+You are an expert coding problem formatter. Extract the problem from the raw text and return ONLY a JSON object.
+
+CRITICAL FORMATTING RULES for the "description" markdown field:
+1. Keep variable names INLINE in sentences. NEVER put a variable name on its own line.
+   WRONG: "Given integers\\ns\\nand\\ne"
+   CORRECT: "Given integers `s` and `e`"
+2. Use `##` headers to separate major sections: Problem Statement, Input Format, Output Format, Examples, Constraints.
+3. Each Example must have a fenced code block with Input and Output labeled inside.
+4. Use backticks for inline code (variable names, values, data types).
+5. Use bullet points `-` for constraints and multiple items.
+6. Be concise. Do not repeat information.
+
+Required JSON structure:
+{{
+    "title": "Problem title as a string",
+    "description": "## Problem Statement\\n\\nGiven two integers `s` and `e`...\\n\\n## Input Format\\n\\n- Two integers `s` and `e` where `s <= e`\\n\\n## Output Format\\n\\n- Print all even numbers from `s` to `e`, each on a new line.\\n\\n## Examples\\n\\n**Example 1:**\\n```\\nInput: s = 1, e = 10\\nOutput: 2 4 6 8 10\\n```\\n\\n## Constraints\\n\\n- `1 <= s <= e <= 10^6`",
+    "difficulty": "Easy, Medium or Hard",
+    "tags": ["Python", "Loops", "Arrays"]
+}}
+
+Source website: {source_url}
+
+Raw Text to extract from:
+{raw_text[:8000]}
+
+Return ONLY the JSON object. No preamble, no explanation.
+"""
     
     logger.debug(f"Querying LLM (llama3-8b-8192) to parse problem from text ({len(raw_text[:8000])} bytes)...")
     try:
