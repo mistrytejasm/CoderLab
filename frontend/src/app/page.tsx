@@ -13,6 +13,7 @@ interface Problem {
   tags: string[];
   status: string;
   created_at: string;
+  sequence_number?: number;
 }
 
 const DIFFICULTY_STYLES: Record<string, string> = {
@@ -26,6 +27,7 @@ export default function Home() {
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
   const [diff, setDiff]         = useState('All');
+  const [tagFilter, setTagFilter] = useState('All');
 
   useEffect(() => { fetchProblems(); }, []);
 
@@ -37,12 +39,17 @@ export default function Home() {
     finally { setLoading(false); }
   };
 
+  // Collect unique tags from all problems (sorted)
+  const allTags = Array.from(new Set(problems.flatMap(p => p.tags))).sort();
+
   const filtered = problems.filter(p => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) ||
                         p.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
     const matchDiff   = diff === 'All' || p.difficulty === diff;
-    return matchSearch && matchDiff;
+    const matchTag    = tagFilter === 'All' || p.tags.includes(tagFilter);
+    return matchSearch && matchDiff && matchTag;
   });
+
 
   const solved   = problems.filter(p => p.status === 'Solved').length;
   const total    = problems.length;
@@ -97,6 +104,16 @@ export default function Home() {
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
             </select>
+            <select
+              value={tagFilter}
+              onChange={e => setTagFilter(e.target.value)}
+              className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="All">All Tags</option>
+              {allTags.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -115,11 +132,12 @@ export default function Home() {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/50">
-                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider w-16">Status</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider">Title</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider w-28">Difficulty</th>
-                  <th className="px-5 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider">Tags</th>
-                  <th className="px-5 py-3 w-10" />
+                  <th className="px-4 py-3 font-semibold text-zinc-400 dark:text-zinc-600 text-xs w-10 text-center">#</th>
+                  <th className="px-4 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider w-14">Status</th>
+                  <th className="px-4 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider">Title</th>
+                  <th className="px-4 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider w-28">Difficulty</th>
+                  <th className="px-4 py-3 font-semibold text-zinc-400 dark:text-zinc-500 text-xs uppercase tracking-wider">Tags</th>
+                  <th className="px-4 py-3 w-8" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -128,12 +146,15 @@ export default function Home() {
                     key={p.id}
                     className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5 text-center">
+                      <span className="text-xs font-mono font-bold text-zinc-300 dark:text-zinc-600">{p.sequence_number ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-3.5">
                       {p.status === 'Solved'
                         ? <BadgeCheck size={20} className="text-emerald-500" />
                         : <XCircle size={20} className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <Link
                         href={`/problems/${p.id}`}
                         className="font-semibold text-zinc-800 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -141,12 +162,12 @@ export default function Home() {
                         {p.title}
                       </Link>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${DIFFICULTY_STYLES[p.difficulty] ?? 'bg-zinc-100 text-zinc-500'}`}>
                         {p.difficulty}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <div className="flex flex-wrap gap-1.5">
                         {p.tags.map(t => (
                           <span key={t} className="px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
@@ -155,8 +176,9 @@ export default function Home() {
                         ))}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 py-3.5">
                       <ChevronRight size={14} className="text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
+
                     </td>
                   </tr>
                 ))}

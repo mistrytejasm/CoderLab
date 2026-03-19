@@ -95,7 +95,7 @@ Return ONLY the JSON object. No preamble, no explanation.
                 {"role": "system", "content": "You are a helpful assistant that strictly outputs JSON."},
                 {"role": "user", "content": prompt}
             ],
-            model="openai/gpt-oss-120b", # or whichever fast model is available via groq
+            model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"}
         )
         

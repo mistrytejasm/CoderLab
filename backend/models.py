@@ -26,6 +26,7 @@ class ProblemBase(BaseModel):
     difficulty: str = Field(default="Easy", pattern="^(Easy|Medium|Hard)$")
     tags: List[str] = []
     status: str = Field(default="Unsolved", pattern="^(Unsolved|Solved)$")
+    sequence_number: Optional[int] = None   # auto-assigned on create
 
 class ProblemCreate(ProblemBase):
     pass
@@ -50,3 +51,11 @@ class ProblemStatusUpdate(BaseModel):
 
 class ProblemImportRequest(BaseModel):
     url: str
+
+class ProblemGenerateRequest(BaseModel):
+    topic: str
+    tags: List[str] = []      # user-supplied tags passed in with the save
+
+class TagSuggestRequest(BaseModel):
+    title: str
+    description: str

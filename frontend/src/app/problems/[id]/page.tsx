@@ -12,31 +12,38 @@ import Editor from '@monaco-editor/react';
 export default function ProblemView() {
   const { id } = useParams();
 
+  const DEFAULT_CODE = '# Write your Python code here...\n\n\ndef solution():\n    pass\n\n\nprint(solution())\n';
+
   const [problem, setProblem] = useState<any>(null);
-  const [code, setCode] = useState<string>(
-    '# Write your Python code here...\n\n\ndef solution():\n    pass\n\n\nprint(solution())\n'
-  );
+  const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [fontSize, setFontSize] = useState(14);
+  const [codeSaved, setCodeSaved] = useState(false);
 
   useEffect(() => {
-    const fetchProblem = async () => {
-      try {
-        const { data } = await api.get(`/problems/${id}`);
-        setProblem(data);
-      } catch (err) {
-        console.error('Failed to load problem', err);
-      }
-    };
-    if (id) fetchProblem();
+    if (!id) return;
+    // Load problem details
+    api.get(`/problems/${id}`)
+      .then(({ data }) => setProblem(data))
+      .catch(err => console.error('Failed to load problem', err));
+    // Load previously saved code
+    api.get(`/solutions/${id}`)
+      .then(({ data }) => {
+        if (data?.code) setCode(data.code);
+      })
+      .catch(() => { /* 404 = no saved code yet, keep default */ });
   }, [id]);
 
   const handleRunCode = async () => {
     setIsRunning(true);
+    setCodeSaved(false);
     setOutput('⏳ Running your code...');
     try {
+      // Save code to DB before running
+      await api.put('/solutions/', { problem_id: id, code });
+      setCodeSaved(true);
       const { data } = await api.post('/execute', { code });
       if (data.stderr) {
         setOutput('❌ Error:\n' + data.stderr);
@@ -64,11 +71,12 @@ export default function ProblemView() {
     }
   };
 
-  const difficultyColor = {
-    Easy: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  const difficultyColor: Record<string, string> = {
+    Easy:   'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     Medium: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-    Hard: 'text-red-400 bg-red-500/10 border-red-500/20',
-  }[problem?.difficulty] ?? 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20';
+    Hard:   'text-red-400 bg-red-500/10 border-red-500/20',
+  };
+  const diffColor = difficultyColor[problem?.difficulty] ?? 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20';
 
   const cleanDescription = (raw: string) =>
     raw
@@ -101,7 +109,7 @@ export default function ProblemView() {
               </Link>
               <ChevronRight size={13} className="text-zinc-300 dark:text-zinc-600" />
               <span className="truncate max-w-[260px]">{problem.title}</span>
-              <span className={`hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider border ${difficultyColor}`}>
+              <span className={`hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider border ${diffColor}`}>
                 {problem.difficulty}
               </span>
             </div>
@@ -131,7 +139,7 @@ export default function ProblemView() {
             {/* Problem heading */}
             <div className="mb-5 pb-4 border-b border-zinc-800">
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider border ${difficultyColor}`}>
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider border ${diffColor}`}>
                   {problem.difficulty}
                 </span>
                 {problem.tags.map((t: string) => (
@@ -163,6 +171,11 @@ export default function ProblemView() {
             <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
               <Code2 size={13} />
               <span>Python 3.10</span>
+              {codeSaved && (
+                <span className="ml-2 text-emerald-400 text-[10px] font-semibold tracking-wide animate-pulse">
+                  ✓ Saved
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
